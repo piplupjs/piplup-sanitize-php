@@ -33,7 +33,7 @@ any WordPress dependency.
 ## Installation
 
 ```bash
-composer require vendor/sanitize-utils
+composer require piplup/sanitize
 ```
 
 The `ext-mbstring` PHP extension is required.

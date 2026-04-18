@@ -1,5 +1,5 @@
 {
-  "name": "piplup/sanitize-utils",
+  "name": "piplup/sanitize",
   "description": "WordPress-like sanitization and escaping utilities for PHP — framework-agnostic, secure by design.",
   "type": "library",
   "license": "MIT",
