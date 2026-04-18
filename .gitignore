@@ -1,0 +1,8 @@
+# Mac
+.DS_Store
+
+# Composer
+/vendor/
+
+# Tests
+.phpunit.result.cache
