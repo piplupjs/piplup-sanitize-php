@@ -1,4 +1,4 @@
-# sanitize-utils
+# piplup/sanitize
 
 A **framework-agnostic PHP 8.1+ Composer library** providing WordPress-style
 sanitization and escaping utilities — rebuilt on modern PHP standards, without
