@@ -69,6 +69,7 @@ final class Kses
         'poster',      // <video poster="…">  (not in presets but may be in custom lists)
         'src',         // <img src="…">, <audio src="…">, <video src="…">
         'xlink:href',  // SVG <use xlink:href="…">
+        'srcset', 'data', 'ping', 'lowsrc', 'background',
     ];
 
     /**
@@ -211,6 +212,26 @@ final class Kses
                 // Even allowed URL attributes can carry javascript: or data: URIs.
                 // Pass them through UrlSanitizer; remove the attribute entirely
                 // if the URL is rejected (returns '').
+                // Special-case `srcset`: it's a comma-separated list of URL [descriptor]
+                // tokens (e.g. "a.jpg 1x, b.jpg 2x").  Sanitize each URL and drop
+                // any token whose URL is rejected.
+                if ($attrLower === 'srcset') {
+                    $parts = array_filter(array_map('trim', explode(',', (string) $node->getAttribute($attrName))));
+                    $clean = array_filter(array_map(function(string $part) {
+                        [$url, $descriptor] = array_pad(preg_split('/\s+/', $part, 2), 2, '');
+                        $safeUrl = UrlSanitizer::escUrlRaw(trim($url));
+                        return $safeUrl !== '' ? trim($safeUrl . ($descriptor !== '' ? ' ' . $descriptor : '')) : '';
+                    }, $parts));
+
+                    if (empty($clean)) {
+                        $node->removeAttribute($attrName);
+                    } else {
+                        $node->setAttribute($attrName, implode(', ', $clean));
+                    }
+
+                    continue;
+                }
+
                 if (in_array($attrLower, self::URL_ATTRIBUTES, true)) {
                     $raw   = $node->getAttribute($attrName);
                     $clean = UrlSanitizer::escUrlRaw($raw);

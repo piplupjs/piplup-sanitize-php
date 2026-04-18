@@ -64,6 +64,16 @@ final class FileSanitizer
     ];
 
     /**
+     * Executable / server-side extensions that are dangerous if embedded in
+     * the base-name (e.g. "shell.php.jpg").  These should be stripped from
+     * the base so multi-extension bypasses cannot survive upload checks.
+     */
+    private const DANGEROUS_EXTENSIONS = [
+        'php', 'php3', 'php4', 'php5', 'php7', 'phtml', 'phar',
+        'asp', 'aspx', 'jsp', 'cgi', 'pl', 'py', 'rb', 'sh',
+    ];
+
+    /**
      * Sanitize a file name for safe use on disk.
      *
      * FULL PIPELINE (executed in this order):
@@ -130,6 +140,9 @@ final class FileSanitizer
 
         // Step 5: sanitize the base name (spaces → hyphens, collapse dots, etc.)
         $base = self::sanitizePart($base);
+
+        // Strip any embedded dangerous extension from the base name
+        $base = self::sanitizeBase($base);
 
         // Step 6: extension must be lowercase alphanumerics only.
         // No dots, no hyphens — just the bare extension string.
@@ -226,5 +239,23 @@ final class FileSanitizer
 
         // Trim edge hyphens and dots.
         return trim($part, '-.');
+    }
+
+    /**
+     * Remove any dangerous embedded extension segments from a base name.
+     *
+     * Example: "shell.php" → "shell" when called for base part of
+     * "shell.php.jpg" so the resulting file is safe.
+     *
+     * @param string $base
+     * @return string
+     */
+    private static function sanitizeBase(string $base): string
+    {
+        return (string) preg_replace_callback(
+            '/\.(' . implode('|', self::DANGEROUS_EXTENSIONS) . ')(?=\.|$)/i',
+            fn($m) => '',
+            $base
+        );
     }
 }

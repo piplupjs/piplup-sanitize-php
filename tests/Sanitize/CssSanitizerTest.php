@@ -42,6 +42,19 @@ final class CssSanitizerTest extends TestCase
         $this->assertSame('', CssSanitizer::sanitize('width: behavior:url(evil.htc);'));
     }
 
+    public function testExpressionWhitespaceBypassBlocked(): void
+    {
+        $this->assertSame('', CssSanitizer::sanitize('color: expression (alert(1))'));
+        $this->assertSame('', CssSanitizer::sanitize("color: EXPRESSION\t(alert(1))"));
+    }
+
+    public function testSemicolonParserHandlesEscapedBackslashes(): void
+    {
+        $css = "color: 'red\\\\'; display: block"; // literal value contains \\\-escaped backslash
+        $out = CssSanitizer::sanitize($css);
+        $this->assertStringContainsString('display: block', $out);
+    }
+
     public function testAllowsBackgroundSizeAndPosition(): void
     {
         $css = 'background-size: cover; background-position: center center;';
@@ -75,7 +88,7 @@ final class CssSanitizerTest extends TestCase
     {
         $css = 'position: absolute; top: 0; left: 0; transform: rotate(45deg);';
         $out = CssSanitizer::sanitize($css);
-        $this->assertStringContainsString('position: absolute', $out);
+        $this->assertStringNotContainsString('position: absolute', $out);
         $this->assertStringContainsString('transform: rotate(45deg)', $out);
     }
 
@@ -114,5 +127,19 @@ final class CssSanitizerTest extends TestCase
         $out = CssSanitizer::sanitize($css);
         $this->assertStringContainsString('https://example.com/b.png', $out);
         $this->assertStringNotContainsString('data:image', $out);
+    }
+
+    public function testCssUrlHostWhitelistBlocksExternalHosts(): void
+    {
+        $css = 'cursor: url("https://attacker.com/track?id=123"), auto';
+        $out = CssSanitizer::sanitize($css, ['example.com']);
+        $this->assertStringNotContainsString('attacker.com', $out);
+    }
+
+    public function testCssUrlHostWhitelistAllowsConfiguredHost(): void
+    {
+        $css = 'background-image: url("https://example.com/a.png")';
+        $out = CssSanitizer::sanitize($css, ['example.com']);
+        $this->assertStringContainsString('https://example.com/a.png', $out);
     }
 }

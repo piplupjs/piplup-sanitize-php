@@ -75,10 +75,10 @@ final class UrlSanitizer
      * @param string[] $allowedProtocols Override the default protocol whitelist.
      * @return string  HTML-encoded, safe URL — or empty string.
      */
-    public static function escUrl(string $url, array $allowedProtocols = []): string
+    public static function escUrl(string $url, array $allowedProtocols = [], bool $allowProtocolRelative = false): string
     {
         // First clean the URL (strip dangerous bits, check protocol).
-        $clean = self::cleanUrl($url, $allowedProtocols);
+        $clean = self::cleanUrl($url, $allowedProtocols, $allowProtocolRelative);
 
         // Then HTML-encode for safe attribute embedding.
         // ENT_QUOTES encodes both " and ' to prevent attribute breakout.
@@ -101,10 +101,10 @@ final class UrlSanitizer
      *
      * Equivalent to WordPress esc_url_raw().
      */
-    public static function escUrlRaw(string $url, array $allowedProtocols = []): string
+    public static function escUrlRaw(string $url, array $allowedProtocols = [], bool $allowProtocolRelative = false): string
     {
         // Same cleaning as escUrl, just without the final HTML encoding step.
-        return self::cleanUrl($url, $allowedProtocols);
+        return self::cleanUrl($url, $allowedProtocols, $allowProtocolRelative);
     }
 
     // =========================================================================
@@ -134,7 +134,7 @@ final class UrlSanitizer
      * @param string[] $allowedProtocols Caller-supplied override or [].
      * @return string                    Cleaned URL (not HTML-encoded).
      */
-    private static function cleanUrl(string $url, array $allowedProtocols): string
+    private static function cleanUrl(string $url, array $allowedProtocols, bool $allowProtocolRelative = false): string
     {
         // Use the caller's list if provided; otherwise fall back to the defaults.
         $allowed = $allowedProtocols !== [] ? $allowedProtocols : self::DEFAULT_ALLOWED_PROTOCOLS;
@@ -196,7 +196,12 @@ final class UrlSanitizer
             }
         }
         // If $protocol is null, the URL is protocol-relative (//example.com/path)
-        // or path-relative (/page, ../page, page).  These are allowed.
+        // or path-relative (/page, ../page, page).  Protocol-relative URLs
+        // are treated as external by default and are rejected unless the
+        // caller explicitly opts in via $allowProtocolRelative.
+        if ($protocol === null && str_starts_with($url, '//') && !$allowProtocolRelative) {
+            return '';
+        }
 
         // Step 7: encode any characters that are not valid unencoded in a URI.
         // We leave already-encoded sequences (like %20) alone to avoid

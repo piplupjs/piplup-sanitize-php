@@ -68,7 +68,6 @@ final class CssSanitizer
 
         // Layout & positioning
         'display' => true,
-        'position' => true,
         'top' => true,
         'right' => true,
         'bottom' => true,
@@ -181,7 +180,7 @@ final class CssSanitizer
      * @param string $css Raw CSS from an attribute value.
      * @return string Cleaned CSS (may be empty).
      */
-    public static function sanitize(string $css): string
+    public static function sanitize(string $css, array $allowedUrlHosts = []): string
     {
         // Ensure valid UTF-8 and decode any HTML entities attackers may use
         // to obfuscate dangerous tokens (e.g. j&#097;vascript).
@@ -206,8 +205,16 @@ final class CssSanitizer
 
             if ($inQuote !== null) {
                 if ($ch === $inQuote) {
-                    $prev = $i > 0 ? mb_substr($css, $i - 1, 1) : '';
-                    if ($prev !== '\\') {
+                    // Count consecutive backslashes before the quote. If the
+                    // count is even, the quote closes the string; if odd,
+                    // the quote is escaped and remains inside the string.
+                    $backslashCount = 0;
+                    $j = $i - 1;
+                    while ($j >= 0 && mb_substr($css, $j, 1) === '\\') {
+                        $backslashCount++;
+                        $j--;
+                    }
+                    if ($backslashCount % 2 === 0) {
                         $inQuote = null;
                     }
                 }
@@ -259,8 +266,9 @@ final class CssSanitizer
 
             // Denylist known dangerous property names (preserve legacy behavior)
             // such as IE's `behavior` and Mozilla's `-moz-binding` which can
-            // introduce executable content.
-            if ($prop === 'behavior' || $prop === '-moz-binding') {
+            // introduce executable content. Also deny `position` to prevent
+            // full-page overlay/usability redress attack vectors (fixed/sticky).
+            if ($prop === 'behavior' || $prop === '-moz-binding' || $prop === 'position') {
                 continue;
             }
 
@@ -282,7 +290,7 @@ final class CssSanitizer
             $lowVal = strtolower($val);
 
             // Dangerous constructs
-            if (str_contains($lowVal, 'expression(')) {
+            if (preg_match('/expression\s*\(/i', $val)) {
                 continue;
             }
 
@@ -321,10 +329,16 @@ final class CssSanitizer
                     $ch = mb_substr($val, $i, 1);
 
                     if ($inQuote !== null) {
-                        // End quote (ignore escaped quotes)
+                        // End quote (ignore escaped quotes). Count preceding
+                        // backslashes to determine whether the quote is escaped.
                         if ($ch === $inQuote) {
-                            $prev = mb_substr($val, $i - 1, 1);
-                            if ($prev !== '\\') {
+                            $backslashCount = 0;
+                            $j = $i - 1;
+                            while ($j >= 0 && mb_substr($val, $j, 1) === '\\') {
+                                $backslashCount++;
+                                $j--;
+                            }
+                            if ($backslashCount % 2 === 0) {
                                 $inQuote = null;
                             }
                         }
@@ -364,12 +378,27 @@ final class CssSanitizer
                 $innerNorm = trim($innerNorm, "'\" \t\n\r\0\x0B");
 
                 // Nested url(...) is suspicious
-                if (preg_match('/url\s*\(/i', $innerNorm)) {
-                    $replacement = '';
-                } else {
-                    $clean = UrlSanitizer::escUrlRaw($innerNorm);
-                    $replacement = $clean === '' ? '' : 'url(' . $clean . ')';
-                }
+                    if (preg_match('/url\s*\(/i', $innerNorm)) {
+                        $replacement = '';
+                    } else {
+                        $clean = UrlSanitizer::escUrlRaw($innerNorm);
+                        if ($clean === '') {
+                            $replacement = '';
+                        } else {
+                            // If the caller supplied an allowlist of hosts, enforce
+                            // it here by checking the parsed host of the cleaned URL.
+                            if (!empty($allowedUrlHosts)) {
+                                $host = parse_url($clean, PHP_URL_HOST);
+                                if ($host !== null && $host !== '' && !in_array($host, $allowedUrlHosts, true)) {
+                                    $replacement = '';
+                                } else {
+                                    $replacement = 'url(' . $clean . ')';
+                                }
+                            } else {
+                                $replacement = 'url(' . $clean . ')';
+                            }
+                        }
+                    }
 
                 $replacements[] = [$p, $endParen, $replacement];
                 $offset = $endParen + 1;

@@ -46,7 +46,6 @@ final class UrlSanitizerTest extends TestCase
             'ftp'          => ['ftp://files.example.com/file.zip'],
             'mailto'       => ['mailto:user@example.com'],
             'relative'     => ['/path/to/page'],
-            'root-relative'=> ['//example.com/path'],
         ];
     }
 
@@ -141,5 +140,17 @@ final class UrlSanitizerTest extends TestCase
         $this->assertStringContainsString('%C3%A4', $result);
         $this->assertStringContainsString('%C3%B6', $result);
         $this->assertStringContainsString('%C3%BC', $result);
+    }
+
+    public function testEscUrlBlocksProtocolRelativeByDefault(): void
+    {
+        $this->assertSame('', UrlSanitizer::escUrl('//attacker.com/xss.js'));
+        $this->assertSame('', UrlSanitizer::escUrlRaw('//attacker.com/xss.js'));
+    }
+
+    public function testEscUrlAllowsProtocolRelativeWhenOptIn(): void
+    {
+        $this->assertNotSame('', UrlSanitizer::escUrl('//example.com/path', [], true));
+        $this->assertNotSame('', UrlSanitizer::escUrlRaw('//example.com/path', [], true));
     }
 }

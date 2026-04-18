@@ -114,7 +114,9 @@ final class JsEscaper
         // are double-quotes, so single quotes are not special in JSON.
         // But since we strip the double-quotes so callers can embed this in
         // single-quoted JS strings (var x = '...'), we must escape ' ourselves.
-        return str_replace("'", "\\'", $result);
+        // Also escape backtick (`) and the template-expression open sequence
+        // (${) so the output is safer when embedded in ES6 template literals.
+        return str_replace(["'", '`', '${'], ["\\'", "\\`", '\\${'], $result);
     }
 
     /**
@@ -192,6 +194,8 @@ final class JsEscaper
             '\\'  => '\\\\',    // backslash → double backslash (must be first)
             '"'   => '\\"',     // double quote → escaped double quote
             "'"   => "\\'",     // single quote → escaped single quote
+            '`'    => '\\`',      // backtick → escaped backtick (template literal safety)
+            '${'   => '\\${',     // template-expression open → escaped sequence
             "\n"  => '\\n',     // newline → literal \n sequence
             "\r"  => '\\r',     // carriage return → literal \r sequence
             "\t"  => '\\t',     // tab → literal \t sequence

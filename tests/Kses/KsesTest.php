@@ -329,4 +329,28 @@ final class KsesTest extends TestCase
         $this->assertStringContainsString('https://example.com', $result);
         $this->assertStringContainsString('xlink:href', $result);
     }
+
+    public function testSrcsetJavascriptStripped(): void
+    {
+        $allowed = AllowedHtml::post();
+        $allowed['img']['srcset'] = true;
+
+        $html = '<img srcset="javascript:alert(1) 2x">';
+        $result = Kses::filter($html, $allowed);
+
+        $this->assertStringNotContainsString('javascript:', strtolower($result));
+        $this->assertStringNotContainsString('srcset=', $result);
+    }
+
+    public function testSrcsetMixedTokensKeepsSafeOnly(): void
+    {
+        $allowed = AllowedHtml::post();
+        $allowed['img']['srcset'] = true;
+
+        $html = '<img srcset="https://example.com/a.png 1x, javascript:alert(1) 2x">';
+        $result = Kses::filter($html, $allowed);
+
+        $this->assertStringContainsString('https://example.com/a.png', $result);
+        $this->assertStringNotContainsString('javascript:', strtolower($result));
+    }
 }

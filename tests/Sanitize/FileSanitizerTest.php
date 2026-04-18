@@ -32,6 +32,8 @@ final class FileSanitizerTest extends TestCase
             'only forbidden'          => ['???',                         'file'],
             'unicode filename'         => ['фото.jpg',                   'file.jpg'],  // non-ASCII base stripped → fallback 'file'
             'long extension'          => ['file.php5',                   'file.php5'],
+            'double dangerous ext'     => ['shell.php.jpg',               'shell.jpg'],
+            'double dangerous ext 2'   => ['evil.php5.png',               'evil.png'],
         ];
     }
 

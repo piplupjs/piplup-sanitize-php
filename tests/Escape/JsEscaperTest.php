@@ -64,6 +64,19 @@ final class JsEscaperTest extends TestCase
         $this->assertSame(2, $unescapedSingleQuotes);
     }
 
+    public function testEscJsEscapesBacktickAndTemplateExpressions(): void
+    {
+        $input = "hello`+alert(document.cookie)+`";
+        $result = JsEscaper::escJs($input);
+        $this->assertStringContainsString('\\`', $result);
+        $this->assertStringNotContainsString('`', str_replace('\\`', '', $result));
+
+        $input2 = '${alert(1)}';
+        $result2 = JsEscaper::escJs($input2);
+        $this->assertStringContainsString('\\${', $result2);
+        $this->assertStringNotContainsString('${', str_replace('\\${', '', $result2));
+    }
+
     // -------------------------------------------------------------------------
     // jsonEncode
     // -------------------------------------------------------------------------
