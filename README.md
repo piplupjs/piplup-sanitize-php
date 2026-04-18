@@ -441,20 +441,6 @@ The test suite covers:
 | ext-intl | optional (better accent removal) |
 | phpunit/phpunit | ^10 (dev only) |
 
----
-
-## Release History
-
-| Version | Status | Contents |
-|---|---|---|
-| v0.1 | ✅ | Core encoding, text sanitization, `esc_html` / `esc_attr` |
-| v0.2 | ✅ | URL, email, filename, slug |
-| v0.3 | ✅ | KSES HTML filter |
-| v0.4 | ✅ | JS escaping, utilities, global helpers |
-| v1.0 | 🔜 | Stable API, full test coverage, security audit |
-
----
-
 ## License
 
 MIT
