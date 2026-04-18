@@ -26,7 +26,6 @@ any WordPress dependency.
 - [Security Model](#security-model)
 - [Testing](#testing)
 - [Requirements](#requirements)
-- [Release History](#release-history)
 
 ---
 
