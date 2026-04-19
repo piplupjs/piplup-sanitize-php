@@ -69,8 +69,30 @@ final class FileSanitizer
      * the base so multi-extension bypasses cannot survive upload checks.
      */
     private const DANGEROUS_EXTENSIONS = [
-        'php', 'php3', 'php4', 'php5', 'php7', 'phtml', 'phar',
-        'asp', 'aspx', 'jsp', 'cgi', 'pl', 'py', 'rb', 'sh',
+        // PHP family and versioned suffixes
+        'php', 'php2', 'php3', 'php4', 'php5', 'php6', 'php7', 'php8', 'php9',
+        'phtml', 'phar', 'phpt', 'phtm',
+
+        // ASP / .NET
+        'asp', 'aspx', 'ascx', 'ashx', 'asmx', 'cshtml', 'vbhtml',
+
+        // Java / JVM web pages
+        'jsp', 'jspx', 'jsw', 'jsv', 'jspf',
+
+        // CGI / common scripting languages
+        'cgi', 'pl', 'py', 'rb', 'sh', 'bash', 'ksh', 'zsh',
+
+        // Server-side includes and related
+        'shtml', 'shtm', 'stm',
+
+        // ColdFusion
+        'cfm', 'cfml', 'cfc',
+
+        // Windows executables / scripts
+        'exe', 'bat', 'cmd', 'ps1', 'vbs', 'vbe', 'wsf', 'wsh',
+
+        // Web server configuration files
+        'htaccess', 'htpasswd',
     ];
 
     /**

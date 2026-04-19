@@ -155,6 +155,16 @@ FileSanitizer::sanitizeFileName('CON.txt');           // → '_CON.txt'
 Handles path traversal, null bytes, Windows-reserved names, forbidden
 filesystem characters, and normalises the extension to lowercase.
 
+Note: `FileSanitizer::sanitizeFileName()` strips dangerous embedded
+extensions from the base name to prevent multi-extension bypasses
+(for example `shell.php8.jpg` → `shell.jpg`). The blocklist includes
+versioned PHP suffixes and other server-side/executable extensions
+(for example: `php2`, `php6`, `php8`, `php9`, `phtml`, `phar`, `shtml`,
+`cgi`, `pl`, `py`, `rb`, `sh`, `exe`, `bat`, `ps1`, `htaccess`). This
+reduces risk but does not replace server-side MIME/type validation;
+validate uploads with `finfo` and prefer an explicit allowlist of
+permitted extensions when possible.
+
 ---
 
 ### EmailSanitizer
@@ -198,14 +208,40 @@ UrlSanitizer::escUrl('javascript:alert(1)');  // → ''
 UrlSanitizer::escUrl('myapp://deep-link', ['myapp']);
 ```
 
+
 | Method | WordPress equivalent |
 |---|---|
-| `escUrl(string, array): string` | `esc_url()` |
-| `escUrlRaw(string, array): string` | `esc_url_raw()` |
+| `escUrl(string $url, array $allowedProtocols = [], bool $allowProtocolRelative = false): string` | `esc_url()` |
+| `escUrlRaw(string $url, array $allowedProtocols = [], bool $allowProtocolRelative = false): string` | `esc_url_raw()` |
 
 Default allowed protocols: `http`, `https`, `ftp`, `ftps`, `mailto`, `news`,
 `irc`, `gopher`, `nntp`, `feed`, `telnet`, `mms`, `rtsp`, `sms`, `svn`,
 `tel`, `fax`, `xmpp`, `webcal`.
+
+Notes:
+- `UrlSanitizer` decodes HTML entities and numeric character references before checking the scheme (defeats obfuscations such as `javascript&#58;`), strips null bytes and control/whitespace characters, and percent-encodes unsafe characters while preserving existing `%XX` escapes.
+- Protocol-relative URLs (`//example.com/path`) are treated as external and are rejected by default; pass `$allowProtocolRelative = true` to allow them explicitly.
+
+---
+
+### CssSanitizer
+
+`Piplup\Sanitize\Sanitize\CssSanitizer`
+
+```php
+use Piplup\Sanitize\Sanitize\CssSanitizer;
+
+// Default usage (Kses::filter() passes ['same-origin'] by default):
+$clean = CssSanitizer::sanitize('cursor: url("/c.cur"), auto', ['same-origin']);
+
+// Allow specific hosts for url(...) tokens:
+$clean = CssSanitizer::sanitize($css, ['example.com', 'cdn.example.com']);
+```
+
+| Method | Notes |
+|---|---|
+| `sanitize(string, array $allowedUrlHosts = []): string` | The optional second parameter controls which hosts are permitted in `url()` tokens. When passed `['same-origin']` (used by `Kses::filter()` by default), absolute URLs that include a scheme or host are removed and only relative URLs are allowed. Passing a non-empty list allows only those hostnames; an empty array (default) permits all cleaned URLs. |
+
 
 ---
 
@@ -287,6 +323,20 @@ Uses **DOMDocument** (not regex) for parsing.  Event handler attributes
 allow-list.  URL-bearing attributes (`href`, `src`, `action`, …) are run
 through `UrlSanitizer::escUrlRaw()` to block `javascript:` and other
 dangerous schemes.
+
+Additional notes:
+
+- When an `<a>` element has `target="_blank"` and the allow-list
+  permits the `rel` attribute, `Kses::filter()` will ensure the `rel`
+  value includes `noopener` and `noreferrer` to prevent reverse
+  tabnapping attacks.
+- Inline `style` attributes are sanitized via `CssSanitizer::sanitize()`.
+  `Kses::filter()` passes a conservative `['same-origin']` sentinel by
+  default which removes absolute external `url()` tokens from inline CSS
+  (only relative URLs are permitted). If your application legitimately
+  requires external CSS resources, pre-sanitize style values with
+  `CssSanitizer::sanitize($css, ['example.com'])` or modify the sanitizer
+  call to allow specific hosts.
 
 ---
 

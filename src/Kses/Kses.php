@@ -197,7 +197,9 @@ final class Kses
                 // parses declarations and validates url(...) tokens.
                 if ($attrLower === 'style') {
                     $raw = $node->getAttribute($attrName);
-                    $cleanCss = CssSanitizer::sanitize($raw);
+                    // Default to same-origin: block absolute external URLs in CSS
+                    // unless callers explicitly opt-in by providing hosts.
+                    $cleanCss = CssSanitizer::sanitize($raw, ['same-origin']);
 
                     if ($cleanCss === '') {
                         $node->removeAttribute($attrName);
@@ -247,6 +249,26 @@ final class Kses
                 // Non-URL attributes that passed the allow-list check are left
                 // unchanged.  The values will be HTML-encoded by DOMDocument
                 // during serialization (e.g. " in an attribute becomes &quot;).
+            }
+
+            // Protect against reverse tabnapping: if this is an <a> tag and
+            // the caller allows the `rel` attribute, ensure that links which
+            // open in a new tab include noopener and noreferrer.  We only
+            // set `rel` when it is present in the allow-list to respect
+            // the caller's attribute policy.
+            if ($tagName === 'a' && isset($allowedAttrs['rel'])) {
+                $target = $node->getAttribute('target');
+                if (strtolower((string) $target) === '_blank') {
+                    $rel = $node->getAttribute('rel');
+                    $parts = array_filter(array_map('trim', explode(' ', (string) $rel)));
+                    if (!in_array('noopener', $parts, true)) {
+                        $parts[] = 'noopener';
+                    }
+                    if (!in_array('noreferrer', $parts, true)) {
+                        $parts[] = 'noreferrer';
+                    }
+                    $node->setAttribute('rel', implode(' ', $parts));
+                }
             }
         });
 

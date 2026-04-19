@@ -243,6 +243,17 @@ final class KsesTest extends TestCase
         $this->assertStringNotContainsString('style=', $result);
     }
 
+    public function testBlocksExternalCssUrlByDefault(): void
+    {
+        $html = '<span style="cursor:url(https://attacker.example/track), auto">hover</span>';
+        $result = Kses::filter($html, AllowedHtml::post());
+
+        // External URL inside CSS should be removed by default (same-origin policy)
+        $this->assertStringNotContainsString('attacker.example', $result);
+        $this->assertStringNotContainsString('url(', $result);
+        $this->assertStringContainsString('style=', $result);
+    }
+
     public function testRemovesBehaviorUrlInStyle(): void
     {
         $html = '<div style="behavior:url(evil.htc)">x</div>';
@@ -352,5 +363,15 @@ final class KsesTest extends TestCase
 
         $this->assertStringContainsString('https://example.com/a.png', $result);
         $this->assertStringNotContainsString('javascript:', strtolower($result));
+    }
+
+    public function testRelNoopenerInjectedForTargetBlank(): void
+    {
+        $html = '<a href="https://example.com" target="_blank">link</a>';
+        $result = Kses::filter($html, AllowedHtml::post());
+
+        $this->assertStringContainsString('rel=', $result);
+        $this->assertStringContainsString('noopener', $result);
+        $this->assertStringContainsString('noreferrer', $result);
     }
 }

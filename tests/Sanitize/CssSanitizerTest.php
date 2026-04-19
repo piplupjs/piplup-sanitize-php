@@ -142,4 +142,12 @@ final class CssSanitizerTest extends TestCase
         $out = CssSanitizer::sanitize($css, ['example.com']);
         $this->assertStringContainsString('https://example.com/a.png', $out);
     }
+
+    public function testSameOriginSentinelBlocksAbsoluteUrls(): void
+    {
+        $css = 'cursor: url("https://attacker.example/track"), auto';
+        $out = CssSanitizer::sanitize($css, ['same-origin']);
+        $this->assertStringNotContainsString('attacker.example', $out);
+        $this->assertStringNotContainsString('url(', $out);
+    }
 }

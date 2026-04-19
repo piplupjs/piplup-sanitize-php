@@ -387,12 +387,30 @@ final class CssSanitizer
                         } else {
                             // If the caller supplied an allowlist of hosts, enforce
                             // it here by checking the parsed host of the cleaned URL.
+                            // Special sentinel: ['same-origin'] means "only allow
+                            // relative URLs (no absolute scheme/host)", which is a
+                            // conservative default for HTML sanitization when the
+                            // sanitizer does not know the application's origin.
                             if (!empty($allowedUrlHosts)) {
                                 $host = parse_url($clean, PHP_URL_HOST);
-                                if ($host !== null && $host !== '' && !in_array($host, $allowedUrlHosts, true)) {
-                                    $replacement = '';
+                                $scheme = parse_url($clean, PHP_URL_SCHEME);
+
+                                // If caller explicitly requested same-origin-only,
+                                // treat any URL with a scheme or host as external
+                                // and therefore disallowed. Relative URLs (no
+                                // scheme/host) are permitted.
+                                if ($allowedUrlHosts === ['same-origin']) {
+                                    if ($scheme !== null || ($host !== null && $host !== '')) {
+                                        $replacement = '';
+                                    } else {
+                                        $replacement = 'url(' . $clean . ')';
+                                    }
                                 } else {
-                                    $replacement = 'url(' . $clean . ')';
+                                    if ($host !== null && $host !== '' && !in_array($host, $allowedUrlHosts, true)) {
+                                        $replacement = '';
+                                    } else {
+                                        $replacement = 'url(' . $clean . ')';
+                                    }
                                 }
                             } else {
                                 $replacement = 'url(' . $clean . ')';

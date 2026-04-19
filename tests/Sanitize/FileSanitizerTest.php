@@ -34,6 +34,15 @@ final class FileSanitizerTest extends TestCase
             'long extension'          => ['file.php5',                   'file.php5'],
             'double dangerous ext'     => ['shell.php.jpg',               'shell.jpg'],
             'double dangerous ext 2'   => ['evil.php5.png',               'evil.png'],
+            // Additional real-world bypass cases
+            'php8 bypass'             => ['shell.php8.jpg',             'shell.jpg'],
+            'php2 bypass'             => ['shell.php2.jpg',             'shell.jpg'],
+            'php6 bypass'             => ['shell.php6.jpg',             'shell.jpg'],
+            'php9 bypass'             => ['shell.php9.jpg',             'shell.jpg'],
+            'shtml bypass'            => ['evil.shtml.jpg',             'evil.jpg'],
+            'htaccess bypass'         => ['bad.htaccess.jpg',           'bad.jpg'],
+            'bat bypass'              => ['exec.bat.jpg',               'exec.jpg'],
+            'ps1 bypass'              => ['script.ps1.jpg',             'script.jpg'],
         ];
     }
 
