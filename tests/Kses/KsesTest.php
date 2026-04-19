@@ -374,4 +374,26 @@ final class KsesTest extends TestCase
         $this->assertStringContainsString('noopener', $result);
         $this->assertStringContainsString('noreferrer', $result);
     }
+
+    public function testRelNoopenerInjectedForCustomAllowlistWhenTargetAllowed(): void
+    {
+        $allowed = ['a' => ['href' => true, 'target' => true]];
+        $html = '<a href="https://attacker.com" target="_blank">link</a>';
+        $result = Kses::filter($html, $allowed);
+
+        $this->assertStringContainsString('rel=', $result);
+        $this->assertStringContainsString('noopener', $result);
+        $this->assertStringContainsString('noreferrer', $result);
+    }
+
+    public function testRelOpenerTokenStrippedWhenPresent(): void
+    {
+        $allowed = ['a' => ['href' => true, 'target' => true, 'rel' => true]];
+        $html = '<a href="https://attacker.com" target="_blank" rel="opener">link</a>';
+        $result = Kses::filter($html, $allowed);
+
+        $this->assertDoesNotMatchRegularExpression('/\\bopener\\b/i', $result);
+        $this->assertStringContainsString('noopener', $result);
+        $this->assertStringContainsString('noreferrer', $result);
+    }
 }

@@ -252,15 +252,21 @@ final class Kses
             }
 
             // Protect against reverse tabnapping: if this is an <a> tag and
-            // the caller allows the `rel` attribute, ensure that links which
-            // open in a new tab include noopener and noreferrer.  We only
-            // set `rel` when it is present in the allow-list to respect
-            // the caller's attribute policy.
-            if ($tagName === 'a' && isset($allowedAttrs['rel'])) {
+            // the caller allows the `target` attribute, ensure that links which
+            // open in a new tab include noopener and noreferrer.  We trigger
+            // this protection when the caller permits `target`, because allowing
+            // `target` implies the caller accepted external navigation risk.
+            // We set the `rel` attribute regardless of whether it was originally
+            // present in the allow-list.
+            if ($tagName === 'a' && isset($allowedAttrs['target'])) {
                 $target = $node->getAttribute('target');
                 if (strtolower((string) $target) === '_blank') {
                     $rel = $node->getAttribute('rel');
                     $parts = array_filter(array_map('trim', explode(' ', (string) $rel)));
+                    // Remove any explicit 'opener' token supplied by the user
+                    // before adding the safe tokens. Browsers treat noopener as
+                    // dominant, but stripping 'opener' keeps the attribute clean.
+                    $parts = array_filter($parts, fn($p) => $p !== 'opener');
                     if (!in_array('noopener', $parts, true)) {
                         $parts[] = 'noopener';
                     }
